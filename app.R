@@ -21,14 +21,18 @@ options(shiny.fullstacktrace = TRUE)
 source("utilities.R", local = TRUE)
 
 leave <- read_csv("data/leave_by_municipYear_OCT23.csv") |>
-  rename(id = kunta) |>
+  rename(
+    id = kunta,
+    year = vuosi,
+  ) |>
   mutate(id = as.integer(id))
 
 mp <- get_municipalities(year = 2022) |>
+  select(!year) |>
   rename(id = kunta) |>
   sf::st_transform("+proj=longlat +datum=WGS84") |>
   left_join(leave, by = "id") |>
-  mutate(leave_total = leave_mTaken + leave_fTaken)
+  mutate(leave_total = shareOverPaternity)
 
 theme_set(
   theme_minimal(
@@ -36,15 +40,6 @@ theme_set(
     base_size = 20
   )
 )
-
-#mp <- get_municipalities(year = 2022) |>
-#  rename(id = kunta) |>
-#  sf::st_transform("+proj=longlat +datum=WGS84")
-#mp$leave1 <- sample(1000, nrow(mp), replace = TRUE)
-#mp$leave2 <- sample(1000, nrow(mp), replace = TRUE)
-#mp$leave3 <- sample(1000, nrow(mp), replace = TRUE)
-#mp$leave4 <- sample(1000, nrow(mp), replace = TRUE)
-#mp$leave5 <- sample(1000, nrow(mp), replace = TRUE)
 
 wsc <- mp |>
   select(!id) |>
@@ -56,26 +51,6 @@ wsc <- mp |>
     leave_total = sum(leave_total, na.rm = TRUE)
   ) |>
   ungroup()
-
-# p1 <- ggplot(mp, aes(fill = kunta)) +
-#  geom_sf(colour = alpha("white", 1/3)) +
-#  labs(subtitle = "municipalities") +
-#  theme(
-#    legend.position = "none",
-#    axis.text = element_blank(),
-#    axis.title = element_blank(),
-#    panel.grid = element_blank()
-#  )
-#
-# p2 <- ggplot(hyv, aes(fill = id)) +
-#  geom_sf(colour = alpha("white", 1/3)) +
-#  labs(subtitle = "wellbeing districts") +
-#  theme(
-#    legend.position = "none",
-#    axis.text = element_blank(),
-#    axis.title = element_blank(),
-#    panel.grid = element_blank()
-#  )
 
 
 #zip <- get_zipcodes(year = 2022)
@@ -170,10 +145,20 @@ server <- function(input, output) {
     render_map(wsc, lab = "wsc")
   })
   output$mp_ts <- renderPlot({
-    render_timeseries(mp, sel = rv$mp_selected, name = "municipality_name_fi")
+    render_timeseries(
+      mp,
+      sel = rv$mp_selected,
+      name = "municipality_name_fi",
+      years = as.character(sort(unique(mp$year)))
+    )
   })
   output$wsc_ts <- renderPlot({
-    render_timeseries(wsc, sel = rv$wsc_selected, name = "wsc")
+    render_timeseries(
+      wsc,
+      sel = rv$wsc_selected,
+      name = "wsc",
+      years = as.character(sort(unique(mp$year))),
+    )
   })
 }
 

@@ -30,13 +30,14 @@ render_map <- function(x, lab) {
     )
 }
 
-render_timeseries <- function(x, sel, name) {
+render_timeseries <- function(x, sel, name, years) {
   x_str <- deparse1(substitute(x))
   name_sym <- sym(name)
   if (length(sel) > 0L) {
     as.data.frame(x) |>
       filter(id %in% sel) |>
-      select(!!name_sym | leave_total) |>
+      select(!!name_sym | leave_total | year) |>
+      distinct() |>
       #select(!!name_sym | starts_with("leave")) |>
       # pivot_longer(
       #   cols = starts_with("leave"),
@@ -45,21 +46,21 @@ render_timeseries <- function(x, sel, name) {
       # ) |>
       ggplot(
         aes(
-          x = !!name_sym,
+          x = year,
           y = leave_total,
           group = !!name_sym,
-          fill = !!name_sym
+          colour = !!name_sym
         )
       ) +
-      geom_bar(stat = "identity") +
-      theme(
-        axis.title.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()
-      )
-      #scale_x_discrete(labels = c("2018", "2019", "2020", "2021", "2022")) +
-      #scale_color_discrete(name = "Kunta") +
-      #geom_line(linewidth = 1.0) +
-      #geom_point()
+      #geom_col() +
+      #theme(
+      #  axis.title.x = element_blank(),
+      #  axis.text.x = element_blank(),
+      #  axis.ticks.x = element_blank()
+      #)
+      #scale_x_discrete(labels = years) +
+      scale_color_discrete(name = "Kunta") +
+      geom_line(linewidth = 1.0) +
+      geom_point()
   }
 }
