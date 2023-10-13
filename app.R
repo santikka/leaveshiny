@@ -12,12 +12,23 @@ suppressPackageStartupMessages({
   library(rlang)
   library(sf)
   library(shiny)
+  library(readr)
   library(tidyr)
 })
 
 options(shiny.fullstacktrace = TRUE)
 
 source("utilities.R", local = TRUE)
+
+leave <- read_csv("data/leave_by_municipYear_OCT23.csv") |>
+  rename(id = kunta) |>
+  mutate(id = as.integer(id))
+
+mp <- get_municipalities(year = 2022) |>
+  rename(id = kunta) |>
+  sf::st_transform("+proj=longlat +datum=WGS84") |>
+  left_join(leave, by = "id") |>
+  mutate(leave_total = leave_mTaken + leave_fTaken)
 
 theme_set(
   theme_minimal(
@@ -26,27 +37,23 @@ theme_set(
   )
 )
 
-mp <- get_municipalities(year = 2022) |>
-  rename(id = kunta) |>
-  sf::st_transform("+proj=longlat +datum=WGS84")
-mp$leave1 <- sample(1000, nrow(mp), replace = TRUE)
-mp$leave2 <- sample(1000, nrow(mp), replace = TRUE)
-mp$leave3 <- sample(1000, nrow(mp), replace = TRUE)
-mp$leave4 <- sample(1000, nrow(mp), replace = TRUE)
-mp$leave5 <- sample(1000, nrow(mp), replace = TRUE)
+#mp <- get_municipalities(year = 2022) |>
+#  rename(id = kunta) |>
+#  sf::st_transform("+proj=longlat +datum=WGS84")
+#mp$leave1 <- sample(1000, nrow(mp), replace = TRUE)
+#mp$leave2 <- sample(1000, nrow(mp), replace = TRUE)
+#mp$leave3 <- sample(1000, nrow(mp), replace = TRUE)
+#mp$leave4 <- sample(1000, nrow(mp), replace = TRUE)
+#mp$leave5 <- sample(1000, nrow(mp), replace = TRUE)
 
 wsc <- mp |>
   select(!id) |>
   rename(id = hyvinvointialue_code) |>
   group_by(id) |>
   summarise(
-    geom_hyv = st_union(geom),
+    geom_wsc = st_union(geom),
     wsc = unique(hyvinvointialue_name_fi),
-    leave1 = sum(leave1),
-    leave2 = sum(leave2),
-    leave3 = sum(leave3),
-    leave4 = sum(leave4),
-    leave5 = sum(leave5)
+    leave_total = sum(leave_total, na.rm = TRUE)
   ) |>
   ungroup()
 
